@@ -4,16 +4,30 @@ import { useFetcher, useLoaderData } from 'react-router'
 import { db } from '~/.server/db'
 import { workoutLogs } from '~/.server/db/schema'
 
+const JST_OFFSET = 9 * 60 * 60 * 1000
+
+function jstDateStr(d: Date) {
+  return new Date(d.getTime() + JST_OFFSET).toISOString().slice(0, 10)
+}
+
+function jstWeekRange(now: Date) {
+  let jst = new Date(now.getTime() + JST_OFFSET)
+  let day = jst.getUTCDay()
+  let mondayJst = new Date(jst)
+  mondayJst.setUTCDate(jst.getUTCDate() - ((day + 6) % 7))
+  mondayJst.setUTCHours(0, 0, 0, 0)
+  let sundayJst = new Date(mondayJst)
+  sundayJst.setUTCDate(mondayJst.getUTCDate() + 7)
+  return {
+    monday: new Date(mondayJst.getTime() - JST_OFFSET),
+    sunday: new Date(sundayJst.getTime() - JST_OFFSET - 1),
+    mondayJst,
+  }
+}
+
 export async function loader() {
   let now = new Date()
-  let day = now.getDay()
-  let monday = new Date(now)
-  monday.setDate(now.getDate() - ((day + 6) % 7))
-  monday.setHours(0, 0, 0, 0)
-
-  let sunday = new Date(monday)
-  sunday.setDate(monday.getDate() + 6)
-  sunday.setHours(23, 59, 59, 999)
+  let { monday, sunday, mondayJst } = jstWeekRange(now)
 
   let logs = await db
     .select()
@@ -27,30 +41,27 @@ export async function loader() {
     .orderBy(workoutLogs.completed_at)
 
   let weekDays = Array.from({ length: 7 }, (_, i) => {
-    let date = new Date(monday)
-    date.setDate(monday.getDate() + i)
+    let date = new Date(mondayJst)
+    date.setUTCDate(mondayJst.getUTCDate() + i)
     let dateStr = date.toISOString().slice(0, 10)
-    let done = logs.some(
-      (l) => l.completed_at.toISOString().slice(0, 10) === dateStr,
-    )
+    let done = logs.some((l) => jstDateStr(l.completed_at) === dateStr)
     return { date: dateStr, done }
   })
 
   let count = logs.length
-  let todayStr = now.toISOString().slice(0, 10)
-  let doneToday = logs.some(
-    (l) => l.completed_at.toISOString().slice(0, 10) === todayStr,
-  )
+  let todayStr = jstDateStr(now)
+  let doneToday = logs.some((l) => jstDateStr(l.completed_at) === todayStr)
 
   return { weekDays, count, doneToday, goal: 3 }
 }
 
 export async function action() {
   let now = new Date()
-  let todayStart = new Date(now)
-  todayStart.setHours(0, 0, 0, 0)
-  let todayEnd = new Date(now)
-  todayEnd.setHours(23, 59, 59, 999)
+  let jst = new Date(now.getTime() + JST_OFFSET)
+  let todayStartJst = new Date(jst)
+  todayStartJst.setUTCHours(0, 0, 0, 0)
+  let todayStart = new Date(todayStartJst.getTime() - JST_OFFSET)
+  let todayEnd = new Date(todayStart.getTime() + 24 * 60 * 60 * 1000 - 1)
 
   let existing = await db
     .select()
