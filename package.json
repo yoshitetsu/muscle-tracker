@@ -32,11 +32,11 @@
     "daisyui": "^5.5.19",
     "drizzle-kit": "^0.31.10",
     "oxfmt": "^0.44.0",
-    "react-router-auto-routes": "^0.8.3",
+    "react-router-auto-routes": "^0.8.4",
     "tailwindcss": "^4.2.2",
     "tsx": "^4.21.0",
     "typescript": "^5.9.3",
-    "vite": "^8.0.5",
+    "vite": "^8.0.8",
     "vite-tsconfig-paths": "^6.1.1"
   },
   "packageManager": "pnpm@10.28.2",
