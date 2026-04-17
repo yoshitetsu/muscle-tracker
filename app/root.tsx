@@ -1,5 +1,22 @@
-import { Links, Outlet, Scripts, ScrollRestoration } from 'react-router'
+import {
+  Form,
+  Links,
+  Outlet,
+  Scripts,
+  ScrollRestoration,
+  useLoaderData,
+} from 'react-router'
+import { requireUser } from '~/.server/session'
 import './tailwind.css'
+
+export async function loader({ request }: { request: Request }) {
+  const url = new URL(request.url)
+  if (url.pathname.startsWith('/auth/')) {
+    return { userLogin: null }
+  }
+  const userLogin = await requireUser(request)
+  return { userLogin }
+}
 
 export function Layout({ children }: { children: React.ReactNode }) {
   return (
@@ -21,5 +38,21 @@ export function Layout({ children }: { children: React.ReactNode }) {
 }
 
 export default function App() {
-  return <Outlet />
+  const data = useLoaderData<typeof loader>()
+  const userLogin = data?.userLogin
+
+  return (
+    <>
+      {userLogin && (
+        <header className="fixed right-0 top-0 z-50 p-3">
+          <Form method="post" action="/auth/logout">
+            <button type="submit" className="btn btn-ghost btn-sm">
+              @{userLogin} · ログアウト
+            </button>
+          </Form>
+        </header>
+      )}
+      <Outlet />
+    </>
+  )
 }
